@@ -1,29 +1,33 @@
-
+// prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "postgresql" // Hum PostgreSQL use kar rahe hain
   url      = env("DATABASE_URL")
 }
 
-// Main User Table
+// Role enum define kar rahe hain admin panel ke liye
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
   email         String?   @unique
   emailVerified DateTime?
-  password      String?   // Manual email/password login ke liye
   image         String?
-  role          Role      @default(USER)
-  accounts      Account[] // Google OAuth account link karne ke liye
+  role          Role      @default(USER) // Default role USER hoga
+  accounts      Account[]
+  sessions      Session[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
 
-// NextAuth requirement: OAuth providers (jaise Google) ka data store karne ke liye
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -43,7 +47,10 @@ model Account {
   @@unique([provider, providerAccountId])
 }
 
-enum Role {
-  USER
-  ADMIN
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
