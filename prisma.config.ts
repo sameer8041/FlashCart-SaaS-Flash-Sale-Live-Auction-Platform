@@ -7,9 +7,6 @@ export default {
 
   // Explicitly define kar rahe hain ki hamara schema kahan hai.
   // Yeh monorepos ya AWS ECS deployments me path issues se bachata hai.
-  schema: {
-    kind: 'single',
-    filePath: 'prisma/schema.prisma',
-  },
+  schema: 'prisma/schema.prisma',
 
 } satisfies PrismaConfig;
