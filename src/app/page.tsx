@@ -1,65 +1,99 @@
+// src/app/page.tsx
 "use client";
 
 import { useSession, signIn, signOut } from "next-auth/react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 
+// Product ka type define kar rahe hain TypeScript ke liye
+interface Product {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  images: string[];
+}
+
 export default function Home() {
-  // useSession se hume user ka data aur login status milta hai
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Jab tak NextAuth check kar raha hai ki token hai ya nahi
-  if (status === "loading") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <p className="text-lg animate-pulse text-gray-500">Checking Authentication...</p>
-      </div>
-    );
-  }
+  // Component mount hote hi API call hogi
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch("/api/products");
+        const data = await res.json();
+        if (data.success) {
+          setProducts(data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
 
-  // Agar user logged in HAI
-  if (session && session.user) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
-        <div className="bg-white p-8 rounded-xl shadow-md text-center max-w-sm w-full">
-          {session.user.image && (
-            <Image
-              src={session.user.image}
-              alt="Profile Picture"
-              width={80}
-              height={80}
-              className="rounded-full mx-auto mb-4 border-2 border-blue-500"
-            />
-          )}
-          <h1 className="text-2xl font-bold text-gray-800">Welcome back!</h1>
-          <p className="text-gray-600 mt-2 font-medium">{session.user.name}</p>
-          <p className="text-gray-400 text-sm mb-6">{session.user.email}</p>
-
-          <button
-            onClick={() => signOut()}
-            className="w-full bg-red-50 text-red-600 hover:bg-red-100 font-semibold py-2 px-4 rounded-lg transition-colors border border-red-200"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Agar user logged in NAHI hai
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
-      <div className="text-center max-w-md">
-        <h1 className="text-4xl font-extrabold text-gray-900 mb-4 tracking-tight">FlashCart SaaS</h1>
-        <p className="text-gray-600 mb-8">
-          High-Concurrency Flash Sale Platform for 1000+ simultaneous users.
-        </p>
-        <button
-          onClick={() => signIn("google")}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-lg hover:shadow-xl w-full flex items-center justify-center gap-3"
-        >
-          <svg className="w-5 h-5 bg-white rounded-full p-0.5 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.345-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0c-6.635 0-12 5.365-12 12s5.365 12 12 12c6.926 0 11.52-4.869 11.52-11.726 0-.788-.085-1.39-.189-1.989H12.24z" /></svg>
-          Login with Google
-        </button>
+    <div className="min-h-screen bg-gray-50 pb-10">
+      {/* Navbar */}
+      <nav className="bg-white shadow-sm p-4 flex justify-between items-center px-8">
+        <h1 className="text-2xl font-black text-red-600 tracking-tighter">⚡ FlashCart</h1>
+        <div>
+          {session ? (
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium text-gray-600">Hi, {session.user?.name}</span>
+              <button onClick={() => signOut()} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md font-semibold hover:bg-gray-200">Logout</button>
+            </div>
+          ) : (
+            <button onClick={() => signIn("google")} className="bg-black text-white px-5 py-2 rounded-md font-semibold hover:bg-gray-800">Login</button>
+          )}
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <div className="text-center py-12 px-4">
+        <h2 className="text-4xl font-extrabold text-gray-900">Live Flash Drops</h2>
+        <p className="text-gray-500 mt-2">Limited stock. High demand. Fastest fingers first.</p>
+      </div>
+
+      {/* Products Grid */}
+      <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {loading ? (
+          <div className="col-span-full text-center py-10 font-medium text-gray-500 animate-pulse">
+            Fetching catalog...
+          </div>
+        ) : (
+          products.map((product) => (
+            <div key={product._id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow">
+              <div className="relative h-64 w-full">
+                {/* Next.js Image component needs domain in next.config.js, so using standard img for dummy data */}
+                <img src={product.images[0]} alt={product.name} className="object-cover w-full h-full" />
+                <div className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full animate-bounce">
+                  Only {product.stock} left!
+                </div>
+              </div>
+              <div className="p-5">
+                <h3 className="text-xl font-bold text-gray-900">{product.name}</h3>
+                <p className="text-gray-500 text-sm mt-1 line-clamp-2">{product.description}</p>
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="text-2xl font-black text-gray-900">₹{product.price.toLocaleString()}</span>
+                  <button
+                    className={`px-6 py-2 rounded-lg font-bold text-white transition-colors ${product.stock > 0 ? "bg-black hover:bg-gray-800" : "bg-gray-300 cursor-not-allowed"
+                      }`}
+                    disabled={product.stock === 0}
+                  >
+                    {product.stock > 0 ? "Buy Now" : "Sold Out"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
