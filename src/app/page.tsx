@@ -1,7 +1,5 @@
 // src/app/page.tsx
-import Navbar from "@/Components/Navbar";
 import { ProductService } from "@/Services/product.service";
-
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +7,7 @@ export default async function Home() {
   const products = await ProductService.getAllProducts();
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
-      <Navbar />
-
+    <div className="pb-10">
       <div className="text-center py-12 px-4">
         <h2 className="text-4xl font-extrabold text-gray-900">Live Flash Drops</h2>
         <p className="text-gray-500 mt-2">Limited stock. High demand. Fastest fingers first.</p>
@@ -25,9 +21,9 @@ export default async function Home() {
         ) : (
           products.map((product: any) => (
             <div key={product._id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="relative h-64 w-full">
+              <div className="relative h-64 w-full bg-gray-100">
                 <img src={product.images[0]} alt={product.name} className="object-cover w-full h-full" />
-                <div className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full animate-bounce">
+                <div className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">
                   Only {product.stock} left!
                 </div>
               </div>
@@ -37,7 +33,6 @@ export default async function Home() {
                 <div className="mt-4 flex items-center justify-between">
                   <span className="text-2xl font-black text-gray-900">₹{product.price.toLocaleString()}</span>
 
-                  {/* Sprint 3 me isme action dalenge */}
                   <button
                     className={`px-6 py-2 rounded-lg font-bold text-white transition-colors ${product.stock > 0 ? "bg-black hover:bg-gray-800" : "bg-gray-300 cursor-not-allowed"
                       }`}
