@@ -1,9 +1,9 @@
 // src/app/page.tsx
 import { ProductService } from "@/Services/product.service";
 
-export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  'use cache'
   const products = await ProductService.getAllProducts();
 
   return (
