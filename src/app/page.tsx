@@ -1,6 +1,6 @@
 // src/app/page.tsx
 import { ProductService } from "@/Services/product.service";
-
+import BuyButton from "@/Components/BuyButton";
 
 export default async function Home() {
   'use cache'
@@ -32,14 +32,7 @@ export default async function Home() {
                 <p className="text-gray-500 text-sm mt-1 line-clamp-2">{product.description}</p>
                 <div className="mt-4 flex items-center justify-between">
                   <span className="text-2xl font-black text-gray-900">₹{product.price.toLocaleString()}</span>
-
-                  <button
-                    className={`px-6 py-2 rounded-lg font-bold text-white transition-colors ${product.stock > 0 ? "bg-black hover:bg-gray-800" : "bg-gray-300 cursor-not-allowed"
-                      }`}
-                    disabled={product.stock === 0}
-                  >
-                    {product.stock > 0 ? "Buy Now" : "Sold Out"}
-                  </button>
+                  <BuyButton product={product} />
                 </div>
               </div>
             </div>

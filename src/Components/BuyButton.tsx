@@ -1,4 +1,4 @@
-// src/components/BuyButton.tsx
+
 "use client";
 
 import { useState } from "react";
