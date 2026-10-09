@@ -11,7 +11,12 @@ export const orderQueue = new Queue("orderQueue", {
             type: "exponential",
             delay: 1000, // Retry karne se pehle 1 second rukega
         },
-        removeOnComplete: true, // Order process hone ke baad queue se hta dega
+        removeOnComplete: {
+            age: 60,
+        },
+        removeOnFail: {
+            age: 60,
+        }
     }
 });
 

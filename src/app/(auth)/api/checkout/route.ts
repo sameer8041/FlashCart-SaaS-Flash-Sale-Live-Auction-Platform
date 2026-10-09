@@ -23,11 +23,17 @@ export async function POST(req: Request) {
         const userId = (session.user as any).id;
 
         const job = await orderQueue.add("processOrder", {
+
             userId,
             productId,
             price,
             timestamp: Date.now(),
+        }, {
+            attempts: 1,
+            removeOnComplete: false,
+            removeOnFail: false
         });
+
 
         // 3. Turant frontend ko response de diya ki line me lag gaye ho
         return NextResponse.json({
