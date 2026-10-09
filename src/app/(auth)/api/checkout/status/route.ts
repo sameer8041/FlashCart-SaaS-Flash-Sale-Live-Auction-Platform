@@ -13,7 +13,8 @@ export async function GET(req: Request) {
         const job = await orderQueue.getJob(jobId);
 
         if (!job) {
-            return NextResponse.json({ success: false, message: "Job not found" }, { status: 404 });
+            return NextResponse.json({ success: false, message: "Job not found", stop: true }, { status: 404 });
+
         }
 
         const state = await job.getState(); // returns 'waiting', 'active', 'completed', 'failed'

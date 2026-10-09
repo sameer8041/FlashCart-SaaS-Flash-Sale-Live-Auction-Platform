@@ -19,7 +19,6 @@ export default function BuyButton({ product }: { product: any }) {
         setStatus("Queuing...");
 
         try {
-            // 1. Order queue me daalo
             const res = await fetch("/api/checkout", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -28,26 +27,61 @@ export default function BuyButton({ product }: { product: any }) {
 
             const data = await res.json();
 
-            if (data.success && data.jobId) {
-                // 2. POLLING: Har 1 second me status check karo
-                const interval = setInterval(async () => {
-                    const statusRes = await fetch(`/api/checkout/status?jobId=${data.jobId}`);
-                    const statusData = await statusRes.json();
+            // 🛑 Rate Limit Fallback (jo humne Bug 3 me fix kiya tha)
+            if (res.status === 429) {
+                setStatus("Please wait 5s...");
+                setLoading(false);
+                setTimeout(() => setStatus(""), 3000);
+                return;
+            }
 
-                    if (statusData.state === "completed") {
-                        setStatus("Order Confirmed! 🎉");
-                        clearInterval(interval);
-                        // Button ko disabled hi rakhte hain success ke baad
-                    } else if (statusData.state === "failed") {
-                        setStatus(statusData.reason === "Out of Stock" ? "Out of Stock ❌" : "Failed ❌");
-                        clearInterval(interval);
-                        setTimeout(() => {
-                            setStatus("");
+            if (data.success && data.jobId) {
+                let attempts = 0; // Infinite loop block karne ke liye counter
+
+                const interval = setInterval(async () => {
+                    attempts++;
+
+                    try {
+                        const statusRes = await fetch(`/api/checkout/status?jobId=${data.jobId}`);
+
+                        // 🚨 NEW: Agar API 404 ya 500 de, toh loop turant rok do!
+                        if (!statusRes.ok) {
+                            console.error("API Error:", statusRes.status);
+                            clearInterval(interval);
+                            setStatus("API Error ❌");
                             setLoading(false);
-                        }, 3000);
-                    } else {
-                        // state 'waiting' ya 'active' hai
-                        setStatus("Processing ⏳");
+                            return;
+                        }
+
+                        const statusData = await statusRes.json();
+
+                        if (statusData.state === "completed") {
+                            setStatus("Order Confirmed! 🎉");
+                            clearInterval(interval);
+                        } else if (statusData.state === "failed") {
+                            setStatus(statusData.reason === "Out of Stock" ? "Out of Stock ❌" : "Failed ❌");
+                            clearInterval(interval);
+                            setTimeout(() => {
+                                setStatus("");
+                                setLoading(false);
+                            }, 3000);
+                        } else {
+                            setStatus("Processing ⏳");
+                        }
+
+                        // 🚨 NEW: Agar worker 15 second tak javab na de, toh fallback
+                        if (attempts >= 15) {
+                            clearInterval(interval);
+                            setStatus("Timeout ❌");
+                            setLoading(false);
+                        }
+
+                    } catch (intervalError) {
+                        // Network disconnect hone par loop roko
+                        console.error("Polling crash:", intervalError);
+                        clearInterval(interval);
+                        setStatus("Network Error");
+                        setLoading(false);
                     }
                 }, 1000);
 
@@ -60,7 +94,6 @@ export default function BuyButton({ product }: { product: any }) {
             setLoading(false);
         }
     };
-
     if (product.stock === 0) {
         return (
             <button disabled className="px-6 py-2 rounded-lg font-bold text-white transition-colors bg-gray-300 cursor-not-allowed">
