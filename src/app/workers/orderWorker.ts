@@ -1,12 +1,12 @@
-
+import "dotenv/config";
 import { Worker } from "bullmq";
 import IORedis from "ioredis";
 import mongoose from "mongoose";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../../lib/prisma";
 
 
 const redis = new IORedis(process.env.REDIS_URL || "redis://localhost:6379", { maxRetriesPerRequest: null });
-const prisma = new PrismaClient();
+
 
 // MongoDB Mongoose Setup
 const productSchema = new mongoose.Schema({ stock: Number }, { strict: false });
