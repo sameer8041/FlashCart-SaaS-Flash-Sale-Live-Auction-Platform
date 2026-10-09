@@ -19,27 +19,45 @@ export default function BuyButton({ product }: { product: any }) {
         setStatus("Queuing...");
 
         try {
+            // 1. Order queue me daalo
             const res = await fetch("/api/checkout", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    productId: product._id,
-                    price: product.price
-                }),
+                body: JSON.stringify({ productId: product._id, price: product.price }),
             });
 
             const data = await res.json();
-            if (data.success) {
-                setStatus("In Queue 🕒"); // User ko pata chal gaya order line me hai
+
+            if (data.success && data.jobId) {
+                // 2. POLLING: Har 1 second me status check karo
+                const interval = setInterval(async () => {
+                    const statusRes = await fetch(`/api/checkout/status?jobId=${data.jobId}`);
+                    const statusData = await statusRes.json();
+
+                    if (statusData.state === "completed") {
+                        setStatus("Order Confirmed! 🎉");
+                        clearInterval(interval);
+                        // Button ko disabled hi rakhte hain success ke baad
+                    } else if (statusData.state === "failed") {
+                        setStatus(statusData.reason === "Out of Stock" ? "Out of Stock ❌" : "Failed ❌");
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            setStatus("");
+                            setLoading(false);
+                        }, 3000);
+                    } else {
+                        // state 'waiting' ya 'active' hai
+                        setStatus("Processing ⏳");
+                    }
+                }, 1000);
+
             } else {
                 setStatus("Failed");
+                setLoading(false);
             }
         } catch (error) {
             setStatus("Error");
-        } finally {
             setLoading(false);
-            // 3 second baad button reset
-            setTimeout(() => setStatus(""), 3000);
         }
     };
 
