@@ -50,6 +50,34 @@ async function startWorker() {
         }
       });
 
+
+      // Targeted Cache Mutation (No Cache Drop)
+      try {
+        const cachedData = await redis.get("flashcart:products:all");
+
+        if (cachedData) {
+          let products = JSON.parse(cachedData);
+
+          // Sirf us specific product ko dhoond kar uska stock minus karo
+          products = products.map((p: any) => {
+            if (p._id === productId && p.stock > 0) {
+              return { ...p, stock: p.stock - 1 };
+            }
+            return p;
+          });
+
+          // Wapas stringify karke Redis me save kar do (bina MongoDB ko hit kiye!)
+          await redis.setex("flashcart:products:all", 3600, JSON.stringify(products));
+          console.log(`🎯 Cache gracefully updated for Product ${productId}`);
+        }
+      } catch (cacheError) {
+        console.error("Cache mutation failed, falling back to delete", cacheError);
+
+        // Agar JSON parse fail ho jaye (rare case), toh as a fallback delete kar do
+        await redis.del("flashcart:products:all");
+      }
+
+
       console.log(`✅ Job ${job.id} Success: Order Confirmed for User ${userId}`);
       return { success: true, message: "Order Confirmed" };
 
