@@ -22,6 +22,8 @@ async function startWorker() {
     const { userId, productId, price } = job.data;
     console.log(`⏱️ Processing Job ${job.id} for Product ${productId}`);
 
+    let stockDecremented = false;
+
     try {
       // ==========================================
       // 🚀 THE MAGIC: ATOMIC DECREMENT (No Race Condition)
@@ -32,11 +34,17 @@ async function startWorker() {
         { new: true }                          // Return: Updated document wapas karo
       );
 
+
+
+
       if (!updatedProduct) {
         // Agar stock 0 tha ya product nahi mila, toh yeh query fail ho jayegi
         console.log(`❌ Job ${job.id} Failed: Out of Stock!`);
         throw new Error("Out of Stock");
       }
+
+      stockDecremented = true;
+
 
       // ==========================================
       // 📦 SAVE TO POSTGRESQL (Transaction successful)
@@ -82,7 +90,13 @@ async function startWorker() {
       return { success: true, message: "Order Confirmed" };
 
     } catch (error) {
-      throw error; // BullMQ isko as failed job mark kar dega
+      // COMPENSATING TRANSACTION (Rollback)
+      if (stockDecremented) {
+        console.error(`Postgres failed! Reverting stock for Product ${productId}`);
+        // Wapas +1 kar do
+        await Product.updateOne({ _id: productId }, { $inc: { stock: 1 } });
+      }
+      throw error; // BullMQ isko as failed job mark karega
     }
   }, { connection: redis });
 
