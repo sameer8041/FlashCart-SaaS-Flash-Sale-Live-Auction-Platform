@@ -53,7 +53,7 @@ async function startWorker() {
         data: {
           userId,
           productId,
-          price,
+          price: updatedProduct.price,
           status: "CONFIRMED",
         }
       });
