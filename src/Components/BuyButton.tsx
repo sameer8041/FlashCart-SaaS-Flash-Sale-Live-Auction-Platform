@@ -102,13 +102,20 @@ export default function BuyButton({ product }: { product: any }) {
         );
     }
 
+    const isOutOfStock = product.stock <= 0;
+
     return (
         <button
             onClick={handleBuy}
-            disabled={loading}
-            className="px-6 py-2 rounded-lg font-bold text-white transition-colors bg-black hover:bg-gray-800 disabled:bg-gray-500"
+            disabled={loading || isOutOfStock} // 🚨 Naya logic
+            className={`px-6 py-2 rounded-lg font-bold text-white transition-all ${isOutOfStock
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : loading
+                        ? "bg-blue-400 cursor-wait"
+                        : "bg-blue-600 hover:bg-blue-700"
+                }`}
         >
-            {status || "Buy Now"}
+            {isOutOfStock ? "Out of Stock" : loading ? status : "Buy Now"}
         </button>
     );
 }
