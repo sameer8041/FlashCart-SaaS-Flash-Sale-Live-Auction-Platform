@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
             console.log(`✅ Payment verified! User: ${userId}, Product: ${productId}`);
 
-            // 🚀 NTEGRATION: Send to BullMQ Queue for inventory deduction
+            //Send to BullMQ Queue for inventory deduction
             await checkoutQueue.add("process-checkout", {
                 userId: userId,
                 productId: productId,
