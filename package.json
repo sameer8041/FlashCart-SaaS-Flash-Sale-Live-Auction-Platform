@@ -2,6 +2,7 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,7 +10,7 @@
     "lint": "eslint",
     "postinstall": "prisma skills sync || exit 0",
     "worker": "ts-node-dev --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} src/app/workers/orderWorker.ts",
-    "socket": "ts-node src/server/socket.ts"
+    "socket": "ts-node -r dotenv/config src/server/server.ts"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
