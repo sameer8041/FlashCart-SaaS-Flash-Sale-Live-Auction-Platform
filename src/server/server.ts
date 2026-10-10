@@ -3,8 +3,15 @@ import { Server } from "socket.io";
 import IORedis from "ioredis";
 
 // Setup Socket Server on port 3001
-const io = new Server(3001, {
-    cors: { origin: "http://localhost:3000", methods: ["GET", "POST"] }
+const PORT = process.env.SOCKET_PORT ? parseInt(process.env.SOCKET_PORT) : 3001;
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+
+
+const io = new Server(PORT, {
+    cors: {
+        origin: FRONTEND_URL, // Sirf hamari Next.js app allow hogi
+        methods: ["GET", "POST"]
+    }
 });
 
 // Redis Subscriber Jo worker ke messages sunega
