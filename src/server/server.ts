@@ -23,18 +23,15 @@ const redisSub = new IORedis(process.env.REDIS_URL || "redis://localhost:6379", 
         return delay;
     }
 })
-redisSub.subscribe("live-inventory", (err, count) => {
-    if (err) console.error("Failed to subscribe: %s", err.message);
-    else console.log(`[Socket] Subscribed to live-inventory channel.`);
+
+redisSub.subscribe("live-inventory", (err) => {
+    if (err) console.error("❌ Redis Subscribe Error:", err);
+    else console.log(`[Socket] Subscribed to live-inventory`);
 });
 
-// jab Worker publish karega, toh yahan message aayega
 redisSub.on("message", (channel, message) => {
     if (channel === "live-inventory") {
         const data = JSON.parse(message);
-        console.log(`📡 Broadcasting stock update for ${data.productId}`);
-
-        //  Sabhi connected Next.js clients ko update bhej do!
         io.emit("stock-updated", data);
     }
 });
@@ -44,4 +41,5 @@ io.on("connection", (socket) => {
     socket.on("disconnect", () => console.log("❌ Client disconnected"));
 });
 
-console.log("🚀 WebSocket Server running on ws://localhost:3001");
+console.log(`🚀 WebSocket Server running on port ${PORT}`);
+
