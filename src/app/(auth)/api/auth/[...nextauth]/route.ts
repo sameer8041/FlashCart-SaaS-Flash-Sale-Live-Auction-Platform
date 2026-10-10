@@ -15,6 +15,7 @@ export const authOptions: NextAuthOptions = {
         }),
     ],
 
+
     // JWT aur session management ki settings
     session: {
         strategy: "jwt",

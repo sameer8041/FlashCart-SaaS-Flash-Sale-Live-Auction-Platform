@@ -69,8 +69,19 @@ async function startWorker() {
           // Sirf us specific product ko dhoond kar uska stock minus karo
           products = products.map((p: any) => {
             if (p._id === productId && p.stock > 0) {
-              return { ...p, stock: p.stock - 1 };
+              const newStock = p.stock - 1;
+
+              // 🚀 SPRINT 4 NEW: Redis Pub/Sub par live stock broadcast karo
+              redis.publish("live-inventory", JSON.stringify({
+                productId: productId,
+                newStock: newStock
+              }));
+
+              return { ...p, stock: newStock };
             }
+
+
+
             return p;
           });
 
