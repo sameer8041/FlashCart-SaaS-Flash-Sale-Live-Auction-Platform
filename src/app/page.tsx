@@ -1,6 +1,7 @@
 // src/app/page.tsx
 import { ProductService } from "@/Services/product.service";
 import BuyButton from "@/Components/BuyButton";
+import LiveInventoryGrid from "@/Components/LiveInventoryGrid";
 
 export default async function Home() {
   'use cache'
@@ -19,7 +20,9 @@ export default async function Home() {
             No products live right now.
           </div>
         ) : (
-          products.map((product: any) => (
+          <LiveInventoryGrid initialProducts={products} />
+
+          /* products.map((product: any) => (
             <div key={product._id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow">
               <div className="relative h-64 w-full bg-gray-100">
                 <img src={product.images[0]} alt={product.name} className="object-cover w-full h-full" />
@@ -36,7 +39,7 @@ export default async function Home() {
                 </div>
               </div>
             </div>
-          ))
+          )) */
         )}
       </div>
     </div>
