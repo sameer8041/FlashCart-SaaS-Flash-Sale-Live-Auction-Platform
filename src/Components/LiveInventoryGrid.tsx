@@ -9,7 +9,8 @@ export default function LiveInventoryGrid({ initialProducts }: { initialProducts
     const [products, setProducts] = useState(initialProducts);
 
     useEffect(() => {
-        const socket = io("http://localhost:3001");
+        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
+        const socket = io(socketUrl);
 
         // "stock-updated" event, sirf product stock update 
         socket.on("stock-updated", (data) => {
