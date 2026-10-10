@@ -113,6 +113,22 @@ async function startWorker() {
 
   worker.on("completed", (job) => console.log(`🎉 Job ${job.id} has completed!`));
   worker.on("failed", (job, err) => console.log(`🚨 Job ${job?.id} has failed: ${err.message}`));
+
+  const gracefulShutdown = async (signal: string) => {
+    console.log(`\n🛑 Received ${signal}, closing worker gracefully...`);
+    // Naye jobs lena band karega, par chalte hue jobs pure karega
+    await worker.close();
+    // Redis connection safe close karega
+    redis.quit();
+    console.log('✅ Worker closed safely.');
+    process.exit(0);
+  };
+
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+
 }
 
 startWorker().catch(console.error);
+
+
