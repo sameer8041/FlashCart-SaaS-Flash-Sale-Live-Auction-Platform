@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma skills sync || exit 0",
-    "worker": "ts-node-dev --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} src/app/workers/orderWorker.ts"
+    "worker": "ts-node-dev --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} src/app/workers/orderWorker.ts",
+    "socket": "ts-node src/server/socket.ts"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
