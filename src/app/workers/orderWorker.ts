@@ -19,7 +19,7 @@ async function startWorker() {
 
   // Worker initialize karna (yeh 'orderQueue' naam ki line sune ga)
   const worker = new Worker("orderQueue", async (job) => {
-    const { userId, productId, price } = job.data;
+    const { userId, productId, rzpPaymentId, rzpOrderId } = job.data;
     console.log(`⏱️ Processing Job ${job.id} for Product ${productId}`);
 
     let stockDecremented = false;
@@ -57,6 +57,16 @@ async function startWorker() {
           status: "CONFIRMED",
         }
       });
+
+      await prisma.order.update({
+        where: { razorpayOrderId: rzpOrderId },
+        data: {
+          status: "CONFIRMED",
+          razorpayPaymentId: rzpPaymentId,
+        }
+      });
+
+      console.log(`🎉 Order ${rzpOrderId} fully processed and confirmed!`);
 
 
       // Targeted Cache Mutation (No Cache Drop)
