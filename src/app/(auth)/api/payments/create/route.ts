@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
-import { getServerSession } from "next-auth"; // Tumhara Sprint 5 ka auth
+import { getServerSession } from "next-auth";
+import { prisma } from "@/lib/prisma";
+// Tumhara Sprint 5 ka auth
 
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID!,
@@ -16,7 +18,7 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { productId, price } = body; // Price hume DB se verify karna chahiye prod mein
+        const { productId, price, userId } = body; // Price hume DB se verify karna chahiye prod mein
 
         // 2. Razorpay options setup (Amount paise mein hota hai, isliye * 100)
         const options = {
@@ -24,13 +26,23 @@ export async function POST(req: Request) {
             currency: "INR",
             receipt: `receipt_${Date.now()}`,
             notes: {
-                productId: productId,
-                userId: session.user?.email || "unknown", // Ideal: session.user.id
+                productId, userId
             },
         };
 
         // 3. Create Order in Razorpay
         const order = await razorpay.orders.create(options);
+
+
+        const newOrder = await prisma.order.create({
+            data: {
+                userId: userId || "dummy-user-id", // Agar auth nahi hai toh dummy ID
+                productId: productId,
+                amount: price,
+                status: "PENDING",
+                razorpayOrderId: order.id, // Razorpay ka order ID save kar liya
+            }
+        });
 
         return NextResponse.json(order, { status: 200 });
     } catch (error) {
