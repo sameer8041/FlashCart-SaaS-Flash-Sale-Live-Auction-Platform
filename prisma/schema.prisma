@@ -61,7 +61,7 @@ model Order {
   id        String      @id @default(cuid())
   userId    String
   productId String // MongoDB document ID reference
-  amount    Float
+  amount    Float       @default(0)
   status    OrderStatus @default(PENDING)
 
   // 💳 Razorpay Specific Fields
