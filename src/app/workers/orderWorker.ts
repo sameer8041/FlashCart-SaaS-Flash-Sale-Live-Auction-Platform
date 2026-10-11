@@ -79,9 +79,6 @@ async function startWorker() {
 
               return { ...p, stock: newStock };
             }
-
-
-
             return p;
           });
 

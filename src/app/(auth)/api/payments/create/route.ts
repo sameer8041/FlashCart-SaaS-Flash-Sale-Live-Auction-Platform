@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+
+
 // Tumhara Sprint 5 ka auth
 
 const razorpay = new Razorpay({

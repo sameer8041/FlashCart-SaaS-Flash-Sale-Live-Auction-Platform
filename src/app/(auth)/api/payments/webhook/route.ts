@@ -30,6 +30,8 @@ export async function POST(req: Request) {
         //  Parse the verified payload
         const data = JSON.parse(rawBody);
 
+
+
         //  Handle the payment success event
         if (data.event === "payment.captured" || data.event === "order.paid") {
             const paymentEntity = data.payload.payment.entity;
@@ -40,10 +42,18 @@ export async function POST(req: Request) {
 
             console.log(`✅ Payment verified! User: ${userId}, Product: ${productId}`);
 
+
+            const rzpPaymentId = paymentEntity.id;
+            const rzpOrderId = paymentEntity.order_id;
+
+            console.log(`✅ Webhook verified! Order: ${rzpOrderId}`);
+
             //Send to BullMQ Queue for inventory deduction
             await checkoutQueue.add("process-checkout", {
                 userId: userId,
                 productId: productId,
+                rzpPaymentId: rzpPaymentId,
+                rzpOrderId: rzpOrderId,
             });
         }
 
