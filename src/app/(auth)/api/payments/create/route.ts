@@ -19,8 +19,19 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        const dbUser = await prisma.user.findUnique({
+            where: { email: session.user?.email as string }
+        });
+
+        if (!dbUser) {
+            return NextResponse.json({ error: "User profile not found in database." }, { status: 404 });
+        }
+
+        const realUserId = dbUser.id; // Mil gaya real user ID!
+
+
         const body = await req.json();
-        const { productId, price, userId } = body; // Price hume DB se verify karna chahiye prod mein
+        const { productId, price } = body; // Price hume DB se verify karna chahiye prod mein
 
         // 2. Razorpay options setup (Amount paise mein hota hai, isliye * 100)
         const options = {
@@ -28,7 +39,8 @@ export async function POST(req: Request) {
             currency: "INR",
             receipt: `receipt_${Date.now()}`,
             notes: {
-                productId, userId
+                productId: productId,
+                userId: realUserId
             },
         };
 
@@ -38,13 +50,14 @@ export async function POST(req: Request) {
 
         const newOrder = await prisma.order.create({
             data: {
-                userId: userId || "dummy-user-id", // Agar auth nahi hai toh dummy ID
+                userId: realUserId, // Agar auth nahi hai toh dummy ID
                 productId: productId,
                 amount: price,
                 status: "PENDING",
-                razorpayOrderId: order.id, // Razorpay ka order ID save kar liya
+                razorpayOrderId: order.id,// Razorpay ka order ID save kar liya
             }
         });
+
 
         return NextResponse.json(order, { status: 200 });
     } catch (error) {

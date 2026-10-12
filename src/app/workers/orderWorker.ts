@@ -5,6 +5,8 @@ import mongoose from "mongoose";
 import { prisma } from "../../lib/prisma";
 
 
+
+
 const redis = new IORedis(process.env.REDIS_URL || "redis://localhost:6379", { maxRetriesPerRequest: null });
 
 
@@ -53,18 +55,20 @@ async function startWorker() {
         data: {
           userId,
           productId,
-          price: updatedProduct.price,
-          status: "CONFIRMED",
+          amount: updatedProduct.price,
+          status: "PENDING",
         }
       });
 
       await prisma.order.update({
         where: { razorpayOrderId: rzpOrderId },
         data: {
-          status: "CONFIRMED",
+          status: "COMPLETED",
           razorpayPaymentId: rzpPaymentId,
         }
       });
+      console.log(" order created in postgres")
+
 
       console.log(`🎉 Order ${rzpOrderId} fully processed and confirmed!`);
 
