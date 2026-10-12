@@ -7,7 +7,7 @@ import { prisma } from "../../lib/prisma";
 
 
 
-const redis = new IORedis(process.env.REDIS_URL || "redis://localhost:6379", { maxRetriesPerRequest: null });
+const redis = new IORedis(process.env.REDIS_URL || "null", { maxRetriesPerRequest: null });
 
 
 // MongoDB Mongoose Setup
@@ -18,11 +18,14 @@ async function startWorker() {
   // Connect to MongoDB
   await mongoose.connect(process.env.MONGODB_URI as string);
   console.log("👷‍♂️ [Worker] Connected to MongoDB");
+  console.log("worker is ready to perform")
 
   // Worker initialize karna (yeh 'orderQueue' naam ki line sune ga)
-  const worker = new Worker("orderQueue", async (job) => {
+  const worker = new Worker("checkoutQueue", async (job) => {
+
     const { userId, productId, rzpPaymentId, rzpOrderId } = job.data;
     console.log(`⏱️ Processing Job ${job.id} for Product ${productId}`);
+
 
     let stockDecremented = false;
 
@@ -124,6 +127,17 @@ async function startWorker() {
 
   worker.on("completed", (job) => console.log(`🎉 Job ${job.id} has completed!`));
   worker.on("failed", (job, err) => console.log(`🚨 Job ${job?.id} has failed: ${err.message}`));
+  worker.on("ready", () => {
+    console.log("🟢 Worker is ready and listening to 'checkout-queue'!");
+  });
+
+  worker.on("error", (err) => {
+    console.error("🔴 Worker Error (Connection Issue?):", err);
+  });
+
+  worker.on("failed", (job, err) => {
+    console.error(`🔴 Job ${job?.id} failed with error:`, err.message);
+  });
 
   const gracefulShutdown = async (signal: string) => {
     console.log(`\n🛑 Received ${signal}, closing worker gracefully...`);
@@ -137,6 +151,7 @@ async function startWorker() {
 
   process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+
 
 }
 

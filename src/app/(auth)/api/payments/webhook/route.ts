@@ -8,12 +8,12 @@ export async function POST(req: Request) {
     console.log('Webhook received at /api/payments/webhook');
     try {
         // Raw body read karna zaroori hai signature verification ke liye
-        const rawBody = await req.text();
+        const textBody = await req.text();
         const signature = req.headers.get("x-razorpay-signature");
         const secret = process.env.RAZORPAY_WEBHOOK_SECRET!;
 
         console.log("Signature Configured:", !!signature);
-        console.log("Secret Configured:", !!secret);
+        console.log("Secret Configured:", secret);
 
 
         if (!signature || !secret) {
@@ -25,8 +25,11 @@ export async function POST(req: Request) {
         //  Generate HMAC SHA256 Signature
         const expectedSignature = crypto
             .createHmac("sha256", secret)
-            .update(rawBody)
+            .update(textBody)
             .digest("hex");
+
+        console.log("Expected Signature:", expectedSignature);
+        console.log("Received Signature:", signature);
 
         //  Verify Razorpay Signature (Security Check)
         if (expectedSignature !== signature) {
@@ -39,7 +42,7 @@ export async function POST(req: Request) {
         console.log("Signature Verified: True")
 
         //  Parse the verified payload
-        const data = JSON.parse(rawBody);
+        const data = JSON.parse(textBody);
 
 
 
@@ -64,10 +67,10 @@ export async function POST(req: Request) {
 
             //Send to BullMQ Queue for inventory deduction
             await checkoutQueue.add("process-checkout", {
-                userId: userId,
-                productId: productId,
-                rzpPaymentId: rzpPaymentId,
-                rzpOrderId: rzpOrderId,
+                userId,
+                productId,
+                rzpPaymentId,
+                rzpOrderId,
             });
             console.log('🚀 Checkout job added to queue');
         }

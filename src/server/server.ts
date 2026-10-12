@@ -24,6 +24,7 @@ const redisSub = new IORedis(process.env.REDIS_URL || "redis://localhost:6379", 
     }
 })
 
+
 redisSub.subscribe("live-inventory", (err) => {
     if (err) console.error("❌ Redis Subscribe Error:", err);
     else console.log(`[Socket] Subscribed to live-inventory`);
