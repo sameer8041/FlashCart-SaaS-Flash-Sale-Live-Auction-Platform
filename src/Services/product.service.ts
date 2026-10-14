@@ -27,6 +27,7 @@ export class ProductService {
                 .sort({ createdAt: -1 })
                 .lean();
 
+
             // 3. Save to Redis for next requests (Expiry set to 1 hour / 3600 seconds)
             await redis.setex(cacheKey, 3600, JSON.stringify(products));
 

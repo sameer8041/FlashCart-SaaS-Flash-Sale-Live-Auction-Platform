@@ -14,6 +14,7 @@ const redis = new IORedis(process.env.REDIS_URL || "null", { maxRetriesPerReques
 const productSchema = new mongoose.Schema({ stock: Number }, { strict: false });
 const Product = mongoose.models.Product || mongoose.model("Product", productSchema);
 
+
 async function startWorker() {
   // Connect to MongoDB
   await mongoose.connect(process.env.MONGODB_URI as string);
@@ -27,26 +28,45 @@ async function startWorker() {
     console.log(`⏱️ Processing Job ${job.id} for Product ${productId}`);
 
 
+
+
     let stockDecremented = false;
 
+
     try {
+
+      let currentStock = await redis.decr(`stock:${productId}`);
+
+      if (currentStock < 0) {
+        await redis.incr(`stock:${productId}`); // Undo the fake decrement
+
+        // Redis is unaware of stock. Let's fetch actual truth from MongoDB
+        const dbProduct = await Product.findById(productId);
+
+        if (!dbProduct || dbProduct.stock <= 0) {
+          throw new Error("OUT OF STOCK");
+        }
+
+        // Heal Redis Cache
+        await redis.set(`stock:${productId}`, dbProduct.stock);
+
+        // Now safely decrement
+        currentStock = await redis.decr(`stock:${productId}`);
+      }
+
+
+
+
       // ==========================================
       // 🚀 THE MAGIC: ATOMIC DECREMENT (No Race Condition)
       // ==========================================
-      const updatedProduct = await Product.findOneAndUpdate(
-        { _id: productId, stock: { $gt: 0 } }, // Condition: ID match ho AUR stock 0 se bada ho
-        { $inc: { stock: -1 } },               // Action: Stock me se 1 minus kar do
-        { new: true }                          // Return: Updated document wapas karo
+      const updatedProduct = await Product.findByIdAndUpdate(
+        productId,
+        { $inc: { stock: -1 } },
+        { new: true }
       );
 
-
-
-
-      if (!updatedProduct) {
-        // Agar stock 0 tha ya product nahi mila, toh yeh query fail ho jayegi
-        console.log(`❌ Job ${job.id} Failed: Out of Stock!`);
-        throw new Error("Out of Stock");
-      }
+      if (!updatedProduct) throw new Error("DB UPDATE FAILED");
 
       stockDecremented = true;
 
@@ -54,14 +74,7 @@ async function startWorker() {
       // ==========================================
       // 📦 SAVE TO POSTGRESQL (Transaction successful)
       // ==========================================
-      await prisma.order.create({
-        data: {
-          userId,
-          productId,
-          amount: updatedProduct.price,
-          status: "PENDING",
-        }
-      });
+
 
       await prisma.order.update({
         where: { razorpayOrderId: rzpOrderId },
@@ -73,71 +86,36 @@ async function startWorker() {
       console.log(" order created in postgres")
 
 
-      console.log(`🎉 Order ${rzpOrderId} fully processed and confirmed!`);
+      redis.publish("live-inventory", JSON.stringify({
+        productId: productId,
+        newStock: currentStock // Updated stock directly from Redis 
+      }));
+
+      console.log(`✅ Job ${job.id} Success: Order Confirmed for User ${userId}`)
+      return { success: true, message: "Order Confirmed" }
 
 
-      // Targeted Cache Mutation (No Cache Drop)
-      try {
-        const cachedData = await redis.get("flashcart:products:all");
-
-        if (cachedData) {
-          let products = JSON.parse(cachedData);
-
-          // Sirf us specific product ko dhoond kar uska stock minus karo
-          products = products.map((p: any) => {
-            if (p._id === productId && p.stock > 0) {
-              const newStock = p.stock - 1;
-
-              // 🚀 SPRINT 4 NEW: Redis Pub/Sub par live stock broadcast karo
-              redis.publish("live-inventory", JSON.stringify({
-                productId: productId,
-                newStock: newStock
-              }));
-
-              return { ...p, stock: newStock };
-            }
-            return p;
-          });
-
-          // Wapas stringify karke Redis me save kar do (bina MongoDB ko hit kiye!)
-          await redis.setex("flashcart:products:all", 3600, JSON.stringify(products));
-          console.log(`🎯 Cache gracefully updated for Product ${productId}`);
-        }
-      } catch (cacheError) {
-        console.error("Cache mutation failed, falling back to delete", cacheError);
-
-        // Agar JSON parse fail ho jaye (rare case), toh as a fallback delete kar do
-        await redis.del("flashcart:products:all");
-      }
 
 
-      console.log(`✅ Job ${job.id} Success: Order Confirmed for User ${userId}`);
-      return { success: true, message: "Order Confirmed" };
 
     } catch (error) {
-      // COMPENSATING TRANSACTION (Rollback)
+      // ==========================================
+      // 🔄 COMPENSATING TRANSACTION (Rollback)
+      // ==========================================
+      console.error("Transaction failed! Initiating rollback...", error);
+
       if (stockDecremented) {
-        console.error(`Postgres failed! Reverting stock for Product ${productId}`);
-        // Wapas +1 kar do
-        await Product.updateOne({ _id: productId }, { $inc: { stock: 1 } });
+        await Product.findByIdAndUpdate(productId, { $inc: { stock: 1 } });
       }
-      throw error; // BullMQ isko as failed job mark karega
+      // Return stock to Redis as well
+      await redis.incr(`stock:${productId}`);
+
+      throw error;// BullMQ isko failed job mark karega[cite: 5]
     }
-  }, { connection: redis });
+  }, { connection: redis })
 
   worker.on("completed", (job) => console.log(`🎉 Job ${job.id} has completed!`));
   worker.on("failed", (job, err) => console.log(`🚨 Job ${job?.id} has failed: ${err.message}`));
-  worker.on("ready", () => {
-    console.log("🟢 Worker is ready and listening to 'checkout-queue'!");
-  });
-
-  worker.on("error", (err) => {
-    console.error("🔴 Worker Error (Connection Issue?):", err);
-  });
-
-  worker.on("failed", (job, err) => {
-    console.error(`🔴 Job ${job?.id} failed with error:`, err.message);
-  });
 
   const gracefulShutdown = async (signal: string) => {
     console.log(`\n🛑 Received ${signal}, closing worker gracefully...`);
